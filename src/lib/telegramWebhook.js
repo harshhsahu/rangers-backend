@@ -484,11 +484,11 @@ function summarizeTelegramUpdate(update) {
 
   const photo = Array.isArray(message.photo)
     ? message.photo.map((p) => ({
-        file_id: p?.file_id,
-        width: p?.width,
-        height: p?.height,
-        file_size: p?.file_size,
-      }))
+      file_id: p?.file_id,
+      width: p?.width,
+      height: p?.height,
+      file_size: p?.file_size,
+    }))
     : null;
 
   return {
@@ -513,28 +513,28 @@ function summarizeTelegramUpdate(update) {
       : null,
     audio: message.audio
       ? {
-          file_id: message.audio.file_id,
-          duration: message.audio.duration,
-          mime_type: message.audio.mime_type,
-          file_name: message.audio.file_name,
-        }
+        file_id: message.audio.file_id,
+        duration: message.audio.duration,
+        mime_type: message.audio.mime_type,
+        file_name: message.audio.file_name,
+      }
       : null,
     video: message.video
       ? {
-          file_id: message.video.file_id,
-          duration: message.video.duration,
-          width: message.video.width,
-          height: message.video.height,
-          mime_type: message.video.mime_type,
-        }
+        file_id: message.video.file_id,
+        duration: message.video.duration,
+        width: message.video.width,
+        height: message.video.height,
+        mime_type: message.video.mime_type,
+      }
       : null,
     document: message.document
       ? {
-          file_id: message.document.file_id,
-          file_name: message.document.file_name,
-          mime_type: message.document.mime_type,
-          file_size: message.document.file_size,
-        }
+        file_id: message.document.file_id,
+        file_name: message.document.file_name,
+        mime_type: message.document.mime_type,
+        file_size: message.document.file_size,
+      }
       : null,
   };
 }
@@ -567,9 +567,9 @@ function extractGtwyErrorMessage(data, status, rawText = "") {
     pick(data?.data) ||
     (Array.isArray(data?.errors)
       ? data.errors
-          .map((e) => pick(e) || String(e))
-          .filter(Boolean)
-          .join("; ")
+        .map((e) => pick(e) || String(e))
+        .filter(Boolean)
+        .join("; ")
       : null);
 
   if (fromFields) return fromFields;
@@ -581,9 +581,9 @@ function extractGtwyErrorMessage(data, status, rawText = "") {
 }
 
 async function streamGtwyCompletion({ versionId, userText, threadId, extraFields, botToken, onDelta, onStart }) {
-  const pythonUrl = (process.env.PYTHON_SERVER_URL || "").replace(/\/$/, "");
+  const pythonUrl = (process.env.GTWY_PYTHON_GTWY_SERVER_URL || "").replace(/\/$/, "");
   const pauthkey = process.env.GTWY_PAUTH_KEY || process.env.ACCESS_KEY;
-  if (!pythonUrl) throw new Error("PYTHON_SERVER_URL is not set");
+  if (!pythonUrl) throw new Error("GTWY_PYTHON_GTWY_SERVER_URL is not set");
   if (!pauthkey) throw new Error("GTWY_PAUTH_KEY is not set");
 
   const payload = {
@@ -856,10 +856,10 @@ async function processTelegramMessage({ channel, versionId, message, chatId, upd
       media?.type === "voice" || media?.type === "audio" || extraFields?.user_urls?.some?.((u) => u?.type === "audio");
     const userMessage = media
       ? media.caption ||
-        userText ||
-        (hasAudio
-          ? "The attached audio IS the user's message to you. Treat whatever is spoken as if the user typed it directly, and respond to it exactly as you would to a normal text message. Do NOT describe, summarize, transcribe, or mention the audio, and do NOT say what the speaker is asking — just reply directly with the answer itself."
-          : "")
+      userText ||
+      (hasAudio
+        ? "The attached audio IS the user's message to you. Treat whatever is spoken as if the user typed it directly, and respond to it exactly as you would to a normal text message. Do NOT describe, summarize, transcribe, or mention the audio, and do NOT say what the speaker is asking — just reply directly with the answer itself."
+        : "")
       : userText;
 
     const threadId = resolveStoredThreadId(channel, chatId);
@@ -900,7 +900,7 @@ async function processTelegramMessage({ channel, versionId, message, chatId, upd
         // Refresh the type-aware status on start; the first answer replaces it.
         onStart: () => {
           if (probe?.ok) {
-            sendDraft(botToken, chatId, draftId, processingStatus).catch(() => {});
+            sendDraft(botToken, chatId, draftId, processingStatus).catch(() => { });
           }
         },
         onDelta: (cleanText) => {

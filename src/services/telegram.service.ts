@@ -22,13 +22,14 @@ interface TelegramApiResult {
   [key: string]: unknown;
 }
 
-function buildWebhookUrl(versionId: string): string | null {
+/** Where Telegram should deliver updates for a version's bot, or null when no public URL is configured. */
+export function buildWebhookUrl(versionId: string): string | null {
   const base = env.telegramWebhookBaseUrl;
   return base ? `${base}/api/telegram/webhook?version_id=${encodeURIComponent(versionId)}` : null;
 }
 
 /** Telegram only delivers to public HTTPS endpoints. */
-const isDeliverable = (url: string | null): url is string =>
+export const isDeliverable = (url: string | null): url is string =>
   Boolean(url && url.startsWith('https://') && !url.includes('localhost'));
 
 /** Points the bot's webhook at this API. Best effort: the failure reason is returned, not thrown. */

@@ -160,7 +160,7 @@ export async function updateChat(input: UpdateChatInput): Promise<UpdateChatRepl
       version_id: input.versionId,
       frontend_url: publicUrl,
       channels_available: String(Boolean(publicUrl)),
-      server_url: env.SERVER_URL ?? '',
+      server_url: env.GTWY_SERVER_URL ?? '',
       scheduler_available: String(Boolean(publicUrl)),
       // "5 pm" is meaningless without the org's timezone, and the browser's zone is not the team's.
       org_timezone: input.orgTimezone,

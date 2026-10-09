@@ -32,9 +32,9 @@ async function resolveProxyAuthToken(proxyAuthToken: string) {
  * Returns the GTWY session used for all subsequent APIs.
  */
 async function gtwyEmbedLogin(embedJwt: string) {
-  if (!env.SERVER_URL) throw new AppError(500, 'SERVER_URL is not set');
+  if (!env.GTWY_SERVER_URL) throw new AppError(500, 'GTWY_SERVER_URL is not set');
 
-  const res = await fetch(`${env.SERVER_URL}/api/embed/login`, {
+  const res = await fetch(`${env.GTWY_SERVER_URL}/api/embed/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: embedJwt },
   });

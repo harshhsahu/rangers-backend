@@ -18,10 +18,10 @@ export async function requestCompletion(
   { allowAccessKeyFallback = false } = {}
 ): Promise<Response> {
   const pauthkey = env.GTWY_PAUTH_KEY || (allowAccessKeyFallback ? env.ACCESS_KEY : undefined);
-  if (!env.PYTHON_SERVER_URL) throw new Error('PYTHON_SERVER_URL is not set');
+  if (!env.GTWY_PYTHON_GTWY_SERVER_URL) throw new Error('GTWY_PYTHON_GTWY_SERVER_URL is not set');
   if (!pauthkey) throw new Error('GTWY_PAUTH_KEY is not set');
 
-  return fetch(`${env.PYTHON_SERVER_URL}/api/v2/model/chat/completion`, {
+  return fetch(`${env.GTWY_PYTHON_GTWY_SERVER_URL}/api/v2/model/chat/completion`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', pauthkey },
     body: JSON.stringify(payload),

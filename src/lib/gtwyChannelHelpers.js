@@ -138,9 +138,9 @@ export function extractGtwyErrorMessage(data, status, rawText = "") {
     pick(data?.data) ||
     (Array.isArray(data?.errors)
       ? data.errors
-          .map((e) => pick(e) || String(e))
-          .filter(Boolean)
-          .join("; ")
+        .map((e) => pick(e) || String(e))
+        .filter(Boolean)
+        .join("; ")
       : null);
 
   if (fromFields) return fromFields;
@@ -179,9 +179,9 @@ export async function streamGtwyCompletion({
   onDelta,
   onStart,
 }) {
-  const pythonUrl = (process.env.PYTHON_SERVER_URL || "").replace(/\/$/, "");
+  const pythonUrl = (process.env.GTWY_PYTHON_GTWY_SERVER_URL || "").replace(/\/$/, "");
   const pauthkey = process.env.GTWY_PAUTH_KEY || process.env.ACCESS_KEY;
-  if (!pythonUrl) throw new Error("PYTHON_SERVER_URL is not set");
+  if (!pythonUrl) throw new Error("GTWY_PYTHON_GTWY_SERVER_URL is not set");
   if (!pauthkey) throw new Error("GTWY_PAUTH_KEY is not set");
 
   const payload = {

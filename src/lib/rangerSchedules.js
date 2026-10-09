@@ -26,21 +26,17 @@ export const MAX_PER_RANGER = Number(process.env.SCHEDULER_MAX_PER_RANGER || 10)
 export const THREAD_MODES = ["fixed", "fresh"];
 
 /**
- * Where EasyCron reaches this app. Deliberately the same env chain the ranger
+ * Where EasyCron reaches this API. Deliberately the same env chain the ranger
  * AI route uses, and separate from TELEGRAM_WEBHOOK_BASE_URL for the same
  * reason: a developer needs jobs pointed at their own machine, not the
  * deployment, or the run writes into a database their UI is not reading.
  */
 export function schedulerBaseUrl() {
-  return (
-    process.env.RANGER_PUBLIC_URL ||
-    process.env.TELEGRAM_WEBHOOK_BASE_URL ||
-    process.env.FRONTEND_URL ||
-    ""
-  ).replace(/\/$/, "");
+  return (process.env.RANGER_PUBLIC_URL || process.env.TELEGRAM_WEBHOOK_BASE_URL || "").replace(/\/$/, "");
 }
 
-const runUrl = (id) => `${schedulerBaseUrl()}/api/scheduler/run?id=${encodeURIComponent(String(id))}`;
+/** The URL EasyCron calls for one schedule — the id is the whole instruction. */
+export const scheduleRunUrl = (id) => `${schedulerBaseUrl()}/api/scheduler/run?id=${encodeURIComponent(String(id))}`;
 
 export const toObjectId = (id) => {
   try {
@@ -157,7 +153,7 @@ export async function createSchedule({ orgId, agentId, versionId, createdBy, inp
   let easycronId;
   try {
     easycronId = await addCronJob({
-      url: runUrl(insertedId),
+      url: scheduleRunUrl(insertedId),
       cronExpression,
       timezone,
       // Prefixed so one shared EasyCron account stays readable per org.

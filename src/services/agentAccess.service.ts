@@ -30,12 +30,12 @@ export async function verifyAgentAccess(
   { agentId, versionId }: AccessTarget
 ): Promise<AgentAccess> {
   if (!token) throw AppError.unauthorized('Authorization token is required');
-  if (!env.SERVER_URL) throw new AppError(500, 'SERVER_URL is not configured');
+  if (!env.GTWY_SERVER_URL) throw new AppError(500, 'GTWY_SERVER_URL is not configured');
   if (!agentId) throw AppError.badRequest('agent_id is required');
 
   let res: Response;
   try {
-    res = await fetch(`${env.SERVER_URL}/api/agent/${encodeURIComponent(agentId)}`, {
+    res = await fetch(`${env.GTWY_SERVER_URL}/api/agent/${encodeURIComponent(agentId)}`, {
       headers: { Authorization: token },
       cache: 'no-store',
     });
