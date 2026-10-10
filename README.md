@@ -57,81 +57,6 @@ discord.js reach Discord's real gateway with a fake token.
 | `/telegram/setup`, `/discord/setup` | POST, DELETE |
 | `/telegram/webhook`, `/discord/webhook` | GET, POST |
 
-## Agents
-
-The four AI helpers behind `/ranger-ai/*` and `/scheduler/cron-ai` are not GTWY agents. Each is a
-document in this service's own `agents` collection, looked up by `slug`. On every call its
-model, prompt and tools are sent to GTWY's direct completion API
-(`POST {GTWY_PYTHON_GTWY_SERVER_URL}/api/v2/model/ai/completion`), so nothing has to exist on GTWY.
-
-Documents are written by hand. They are read on every call, so an edit applies to the next request.
-
-| `slug` | Used by | Gets these variables | Must answer with |
-| --- | --- | --- | --- |
-| `ranger_builder` | `/ranger-ai/chat` | none | JSON `{ response, draft_config }`, so give it a `json_schema` `response_type` |
-| `ranger_prompt` | `/ranger-ai/prompt` | `fields`, `query` | JSON `{ role, goal, instruction }` (plain text also works) |
-| `ranger_update` | `/ranger-ai/update` (SSE) | `pre_function` (the ranger version's config as JSON, read from GTWY's `/api/versions/:id`), `auth_token`, `agent_id`, `version_id`, `frontend_url`, `channels_available`, `server_url`, `scheduler_available`, `org_timezone`, `available_knowledge_bases`, `model_type` | Text. The editor refreshes its panels by tool name, so keep the tool names it knows (`update_agent_info`, `manageRangerChannel`, `manageRangerResourcesmcpkb`, `manageRangerVersion`, `manageRangerVersion_2`, `manageRangerSchedule`, `lookup_model_details`). |
-| `cron_assistant` | `/scheduler/cron-ai` | none | JSON `{ cronExpression, meaning, answerable, reason }` |
-
-```js
-{
-  slug: 'cron_assistant',
-  name: 'Cron assistant',                    // optional, for people reading the collection
-  service: 'openai',                         // a service GTWY's /api/service lists
-  configuration: {
-    type: 'chat',                            // the model's type in GTWY's catalog: chat | reasoning
-    model: 'gpt-4o-mini',
-    prompt: 'You turn schedules into cron…', // or { role, goal, instruction }; may use {{variable}}
-    response_type: { type: 'json_schema', json_schema: { name: 'cron', strict: true, schema: { /* … */ } } },
-    temperature: 0                           // any other model parameter; left out = model default
-  },
-  settings: {}                               // optional GTWY settings, e.g. maximum_iterations (tool rounds, default 3)
-}
-```
-
-`ranger_update` also carries `tools`, sent to GTWY as `extra_tools`. For example:
-
-```js
-tools: [
-  {
-    name: 'manageRangerSchedule',
-    description: 'Create a schedule for this ranger',
-    url: '{{frontend_url}}/api/scheduler',                // {{variable}} is filled by this service
-    method: 'POST',
-    headers: { Authorization: '{{auth_token}}' },         // so the tool acts as the signed-in user
-    fields: { message: { type: 'string', description: 'What the ranger should do' } /* … */ },
-    required: ['message'],
-    tool_and_variable_path: { agent_id: 'agent_id', version_id: 'version_id' } // filled by GTWY, hidden from the model
-  }
-]
-```
-
-Things GTWY does not tell you when you get them wrong:
-
-- **Variables.** `{{name}}` in the prompt is replaced from the call's variables. A variable the prompt
-  uses but the call does not send is left in as literal text, with no error. An Anthropic prompt
-  must not start with `{{`, or GTWY skips the substitution entirely.
-- **`response_type`.** It is always an object. OpenAI's `json_schema` needs `json_schema.name`;
-  Gemini needs the `json_schema.schema` wrapper; Anthropic only takes `json_schema`. Leave it
-  out for plain text.
-- **Tools.** GTWY sends a tool's `url` and `headers` verbatim. This service fills `{{variable}}` in
-  them before the call. Arguments named in `tool_and_variable_path` are filled by GTWY from the
-  variables, and are hidden from the model.
-
-**Checks.** At startup each agent's document is validated and its `service`/`type`/`model` is
-checked against GTWY's model catalog (`GET {GTWY_SERVER_URL}/api/service/:service`). Problems are
-logged as `[agents]` / `[gtwy-models]` lines.
-
-- **Missing or invalid document:** that agent's route answers 503 "This assistant is not set up yet.",
-  and the log line says what is wrong.
-- **Model GTWY doesn't list:** the route answers 503 naming the model.
-- **Catalog can't be read:** calls go ahead, and GTWY still rejects an unknown model itself.
-
-**Billing.** No API key is sent, so GTWY runs these calls on its platform key and bills the org's
-wallet. It's free when the org is GTWY's platform org. All of them appear in GTWY under one hidden
-"Direct API Calls" agent. GTWY allows 100 direct calls a minute per org and 20 per thread; past that
-the routes answer 429.
-
 ## Architecture
 
 Requests flow through one layer at a time; each layer only talks to the one below it.
@@ -147,7 +72,8 @@ only      (400 on fail)                 logic        integrations
   No validation, no Mongo, no `fetch`, no business rules.
 - **services/** – business logic. Framework-free (no `req`/`res`); throw `AppError` for
   anything the caller should see.
-- **models/** – typed Mongo collections and their indexes.
+- **models/** – typed Mongo collections and their indexes. The schema Rangers is moving to
+  (`rangers` + `schedules`) is described in [docs/database.md](docs/database.md).
 - **lib/** – integrations and domain helpers carried over from the Next app (EasyCron,
   Telegram, Discord Gateway, GTWY streaming, crypto, cron parsing).
 - **middlewares/** – session token resolution, header-secret guards, the error handler.

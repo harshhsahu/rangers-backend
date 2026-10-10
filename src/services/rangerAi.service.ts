@@ -1,16 +1,10 @@
-import { randomUUID } from 'node:crypto';
 import type { ReadableStream } from 'node:stream/web';
 import { env } from '../config/env.js';
-import { AGENTS } from '../constants/agents.js';
-import { AppError, errorMessage } from '../utils/AppError.js';
+import { GTWY_AGENTS } from '../constants/agents.js';
+import { AppError } from '../utils/AppError.js';
 import { safeJsonParse } from '../utils/json.js';
 import { verifyAgentAccess } from './agentAccess.service.js';
-import {
-  completionContent,
-  requestAgentCompletion,
-  throwIfRateLimited,
-  upstreamErrorMessage,
-} from './gtwyCompletion.service.js';
+import { completionContent, requestCompletion, upstreamErrorMessage } from './gtwyCompletion.service.js';
 
 /** Reads a failed upstream response and turns it into an error with the upstream status. */
 async function upstreamError(upstream: Response): Promise<AppError> {
@@ -26,15 +20,16 @@ export interface BuildChatReply {
 }
 
 /**
- * "Build with AI" chat. The shape of the reply comes from the agent's response_type, a
- * json_schema for {response, draft_config} in its document.
+ * "Build with AI" chat. response_type is omitted on purpose: the completion API
+ * returns JSON by default, letting the agent's own json_schema drive the shape.
  */
 export async function buildChat(message: string, threadId: string): Promise<BuildChatReply> {
-  const upstream = await requestAgentCompletion(AGENTS.RANGER_BUILDER, {
+  const upstream = await requestCompletion({
     user: message,
+    agent_id: GTWY_AGENTS.RANGER_BUILDER,
     thread_id: threadId,
+    variables: {},
   });
-  throwIfRateLimited(upstream);
   if (!upstream.ok) throw await upstreamError(upstream);
 
   const rawText = await upstream.text();
@@ -60,12 +55,12 @@ export type PromptDraft = string | { role?: string; goal?: string; instruction?:
 
 /** Asks the prompt-builder agent for a system prompt. Creates nothing. */
 export async function draftPrompt({ name, role, description }: PromptDraftInput): Promise<PromptDraft> {
-  const upstream = await requestAgentCompletion(
-    AGENTS.RANGER_PROMPT,
+  const upstream = await requestCompletion(
     {
       user: 'Write the role, goal and instruction for this agent.',
+      agent_id: GTWY_AGENTS.RANGER_PROMPT,
       // A fresh thread each time, so one draft never influences the next.
-      thread_id: `ranger_prompt_${randomUUID()}`,
+      thread_id: `ranger_prompt_${Date.now()}`,
       // The agent needs both: `fields` is what to write, `query` is what to write it from.
       variables: {
         fields: 'role,goal,instruction',
@@ -77,18 +72,15 @@ export async function draftPrompt({ name, role, description }: PromptDraftInput)
     { allowAccessKeyFallback: true }
   );
 
-  throwIfRateLimited(upstream);
   // Read once as text: it is the reply on the way through, and the reason when it fails.
   const raw = await upstream.text().catch(() => '');
   const prompt = upstream.ok ? extractPrompt(safeJsonParse(raw, {})) : '';
 
   if (!prompt) {
     console.error('[ranger-ai] prompt: no draft', upstream.status, raw.slice(0, 300));
-    // A failure is shown as the API wrote it — a wrong model looks like an outage otherwise.
-    const message = upstream.ok
-      ? 'No draft came back. Try again.'
-      : upstreamErrorMessage(safeJsonParse(raw, {}), raw.slice(0, 300), 'The prompt assistant did not respond');
-    throw new AppError(502, message);
+    // A failure is shown as the API wrote it — a wrong agent id looks like an outage otherwise.
+    const message = upstream.ok ? 'No draft came back. Try again.' : raw.slice(0, 300);
+    throw new AppError(502, message || 'The prompt assistant did not respond');
   }
   return prompt;
 }
@@ -136,28 +128,6 @@ export interface UpdateChatInput {
 export type UpdateChatReply = { kind: 'stream'; body: ReadableStream } | { kind: 'text'; text: string };
 
 /**
- * The ranger's current configuration, as JSON text for the update agent's {{pre_function}}
- * variable: the one GTWY's pre-function filled when this agent lived on GTWY. Read with the
- * caller's session from the API the editor uses. A failure is handed to the agent as text,
- * as GTWY did, so it can say it could not read the ranger instead of the chat failing.
- */
-async function readRangerConfig(token: string, versionId: string): Promise<string> {
-  try {
-    const res = await fetch(`${env.GTWY_SERVER_URL}/api/versions/${encodeURIComponent(versionId)}`, {
-      headers: { Authorization: token },
-      cache: 'no-store',
-    });
-    const body: any = await res.json().catch(() => ({}));
-    if (res.ok && body?.agent) return JSON.stringify(body.agent);
-    console.error('[ranger-ai] update: could not read the ranger version', res.status);
-    return `Error while reading the ranger's configuration (HTTP ${res.status}).`;
-  } catch (error) {
-    console.error('[ranger-ai] update: could not read the ranger version', errorMessage(error));
-    return "Error while reading the ranger's configuration.";
-  }
-}
-
-/**
  * "Update the ranger" chat.
  *
  * Two credentials are in play and they are not interchangeable:
@@ -179,12 +149,12 @@ export async function updateChat(input: UpdateChatInput): Promise<UpdateChatRepl
   // rather than handed a URL it cannot reach.
   const publicUrl = env.publicUrl;
 
-  const upstream = await requestAgentCompletion(AGENTS.RANGER_UPDATE, {
+  const upstream = await requestCompletion({
     user: input.message,
+    agent_id: GTWY_AGENTS.RANGER_UPDATE,
     thread_id: input.threadId,
     stream: true,
     variables: {
-      pre_function: await readRangerConfig(token, input.versionId),
       auth_token: token,
       agent_id: input.agentId,
       version_id: input.versionId,
@@ -199,11 +169,10 @@ export async function updateChat(input: UpdateChatInput): Promise<UpdateChatRepl
       model_type: input.modelType,
     },
   });
-  throwIfRateLimited(upstream);
   if (!upstream.ok) throw await upstreamError(upstream);
 
-  // GTWY only streams when the agent's model supports it, so both shapes are handled and
-  // normalised to one format for the client.
+  // Whether the answer streams is a property of the agent's configuration, not this
+  // request, so both shapes are handled and normalised to one format for the client.
   const contentType = upstream.headers.get('content-type') || '';
   if (contentType.includes('text/event-stream') && upstream.body) {
     return { kind: 'stream', body: upstream.body as unknown as ReadableStream };
