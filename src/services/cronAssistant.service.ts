@@ -1,8 +1,9 @@
-import { GTWY_AGENTS } from '../constants/agents.js';
+import { randomUUID } from 'node:crypto';
+import { AGENTS } from '../constants/agents.js';
 import { describeCron, nextCronRuns, validateCronExpression } from '../lib/cronExpression.js';
 import { cronCaveat } from '../lib/rangerSchedules.js';
 import { AppError } from '../utils/AppError.js';
-import { requestCompletion } from './gtwyCompletion.service.js';
+import { requestAgentCompletion, throwIfRateLimited } from './gtwyCompletion.service.js';
 
 export interface GeneratedCron {
   cron_expression: string;
@@ -19,17 +20,18 @@ export interface GeneratedCron {
  * the model is a convenience over the preset dropdowns, not an authority.
  */
 export async function generateCron(text: string, timezone: string): Promise<GeneratedCron> {
-  const upstream = await requestCompletion(
+  const upstream = await requestAgentCompletion(
+    AGENTS.CRON_ASSISTANT,
     {
       user: text,
-      agent_id: GTWY_AGENTS.CRON_ASSISTANT,
-      // One thread per request so an earlier question cannot colour this answer.
-      thread_id: `cron_ai_${Date.now()}`,
-      response_type: 'text',
+      // One thread per request so an earlier question cannot colour this answer. A UUID, not a
+      // timestamp, so two requests in the same millisecond never share a thread.
+      thread_id: `cron_ai_${randomUUID()}`,
     },
     { allowAccessKeyFallback: true }
   );
 
+  throwIfRateLimited(upstream);
   if (!upstream.ok) {
     const detail = await upstream.text().catch(() => '');
     console.error('[cron-ai] completion failed', upstream.status, detail.slice(0, 300));

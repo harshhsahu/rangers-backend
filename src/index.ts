@@ -4,6 +4,7 @@ import dns from 'node:dns';
 import { createApp } from './app.js';
 import { closeDatabase } from './config/database.js';
 import { startDiscordBots, stopDiscordBots } from './jobs/discordBots.js';
+import { verifyAgents } from './services/agents.service.js';
 
 // Some hosts (containers without a working IPv6 route) have Node's fetch try IPv6
 // first and fail outright instead of falling back to IPv4 the way curl does.
@@ -14,6 +15,7 @@ const SHUTDOWN_TIMEOUT_MS = 10_000;
 const server = createApp().listen(env.PORT, () => {
   console.log(`Server running on http://localhost:${env.PORT} (${env.NODE_ENV})`);
   void startDiscordBots();
+  void verifyAgents();
 });
 
 let shuttingDown = false;
