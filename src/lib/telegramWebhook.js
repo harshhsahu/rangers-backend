@@ -2,6 +2,7 @@ import { getChannelDetailsCollection } from "../models/channelDetails.model.js";
 import { decryptSecret, maskSecret } from "./crypto.js";
 import { TelegramStreamUpdater } from "./telegramStreamUpdater.js";
 import { humanizeGtwyError } from "./gtwyChannelHelpers.js";
+import { getViaSocketExtraTools, redactExtraTools } from "./viasocketAppTools.js";
 
 const TELEGRAM_TEXT_LIMIT = 4096;
 const DRAFT_CHUNK_THRESHOLD = Number(process.env.TELEGRAM_DRAFT_CHUNK_THRESHOLD) || 1000;
@@ -594,8 +595,10 @@ async function streamGtwyCompletion({ versionId, userText, threadId, extraFields
     ...(extraFields || {}),
   };
   if (threadId) payload.thread_id = String(threadId);
+  const appTools = await getViaSocketExtraTools({ versionId });
+  if (appTools.length) payload.extra_tools = [...(payload.extra_tools || []), ...appTools];
 
-  console.log("[tg] GTWY payload", JSON.stringify(maskGtwyPayloadForLog(payload, botToken)));
+  console.log("[tg] GTWY payload", JSON.stringify(redactExtraTools(maskGtwyPayloadForLog(payload, botToken))));
 
   const response = await fetch(`${pythonUrl}/api/v2/model/chat/completion`, {
     method: "POST",

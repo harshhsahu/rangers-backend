@@ -7,6 +7,7 @@ import manifestRoutes from './manifest.routes.js';
 import rangerAiRoutes from './rangerAi.routes.js';
 import schedulerRoutes from './scheduler.routes.js';
 import telegramRoutes from './telegram.routes.js';
+import viasocketRoutes from './viasocket.routes.js';
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.use('/ranger-ai', rangerAiRoutes);
 router.use('/scheduler', schedulerRoutes);
 router.use('/telegram', telegramRoutes);
 router.use('/discord', discordRoutes);
+router.use('/viasocket', viasocketRoutes);
 
 export default router;

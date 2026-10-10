@@ -2,6 +2,8 @@
  * Transport-agnostic helpers shared by Telegram / Discord channel webhooks.
  */
 
+import { getViaSocketExtraTools, redactExtraTools } from "./viasocketAppTools.js";
+
 export function stripReasoning(text) {
   let t = String(text || "");
   if (!t.trim()) return "";
@@ -192,8 +194,10 @@ export async function streamGtwyCompletion({
     ...(extraFields || {}),
   };
   if (threadId) payload.thread_id = String(threadId);
+  const appTools = await getViaSocketExtraTools({ versionId });
+  if (appTools.length) payload.extra_tools = [...(payload.extra_tools || []), ...appTools];
 
-  const logged = typeof maskPayload === "function" ? maskPayload(payload) : payload;
+  const logged = redactExtraTools(typeof maskPayload === "function" ? maskPayload(payload) : payload);
   console.log(logPrefix, "GTWY payload", JSON.stringify(logged));
 
   const response = await fetch(`${pythonUrl}/api/v2/model/chat/completion`, {

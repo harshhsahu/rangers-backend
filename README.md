@@ -56,6 +56,12 @@ discord.js reach Discord's real gateway with a fake token.
 | `/scheduler/reconcile` (admin key) | GET |
 | `/telegram/setup`, `/discord/setup` | POST, DELETE |
 | `/telegram/webhook`, `/discord/webhook` | GET, POST |
+| `/viasocket/apps`, `/viasocket/apps/:serviceId/versions` | GET |
+| `/viasocket/register`, `/viasocket/authentications`, `/viasocket/token` | POST |
+| `/viasocket/app-tools` | GET, POST |
+| `/viasocket/app-tools/:id` | DELETE |
+| `/viasocket/app-tools/:id/run` (GTWY target, run-key header) | POST |
+| `/viasocket/tools`, `/viasocket/run/:id` (single-action tools) | POST |
 
 ## Architecture
 
