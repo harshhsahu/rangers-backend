@@ -1,11 +1,17 @@
-/** Published GTWY agents this service drives through the completion API. */
-export const GTWY_AGENTS = {
+/**
+ * Agents this service runs, by their slug in the `agents` collection. Each document holds
+ * the agent's model, prompt and tools, which are sent to GTWY's direct completion API on
+ * every call (see README "Agents").
+ */
+export const AGENTS = {
   /** "Build with AI" ranger builder. */
-  RANGER_BUILDER: '6a881574306498162b09a296',
+  RANGER_BUILDER: 'ranger_builder',
   /** Drafts a ranger's role, goal and instruction. */
-  RANGER_PROMPT: '6843d832aab19264b8967f3b',
+  RANGER_PROMPT: 'ranger_prompt',
   /** "Update the ranger" chat. */
-  RANGER_UPDATE: '6a98e24a1b30b30277b9f371',
+  RANGER_UPDATE: 'ranger_update',
   /** Turns "every weekday at 9" into a cron expression. */
-  CRON_ASSISTANT: '6aa016abb54ce2b5442ddcea',
+  CRON_ASSISTANT: 'cron_assistant',
 } as const;
+
+export type AgentSlug = (typeof AGENTS)[keyof typeof AGENTS];
