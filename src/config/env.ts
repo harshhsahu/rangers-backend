@@ -15,7 +15,7 @@ interface EnvValues {
   /** Same value as the frontend's NEXT_PUBLIC_ENV; prefixes the local_token cookie name. */
   APP_ENV?: string;
 
-  GTWY_PYTHON_GTWY_SERVER_URL?: string;
+  GTWY_PYTHON_SERVER_URL?: string;
   GTWY_SERVER_URL?: string;
   /** The web app's origin; used for absolute URLs in the install manifest. */
   FRONTEND_URL?: string;
@@ -41,7 +41,7 @@ const schema = Joi.object<EnvValues>({
   CORS_ORIGIN: Joi.string().trim().empty('').default('*'),
   APP_ENV: optional,
 
-  GTWY_PYTHON_GTWY_SERVER_URL: optionalUrl,
+  GTWY_PYTHON_SERVER_URL: optionalUrl,
   GTWY_SERVER_URL: optionalUrl,
   FRONTEND_URL: optionalUrl,
   PROXY_URL: optionalUrl.default('https://routes.msg91.com'),
@@ -71,7 +71,7 @@ const origin = (url: string | undefined) => url?.replace(/\/$/, '');
 
 const values: EnvValues = {
   ...value,
-  GTWY_PYTHON_GTWY_SERVER_URL: origin(value.GTWY_PYTHON_GTWY_SERVER_URL),
+  GTWY_PYTHON_SERVER_URL: origin(value.GTWY_PYTHON_SERVER_URL),
   GTWY_SERVER_URL: origin(value.GTWY_SERVER_URL),
   FRONTEND_URL: origin(value.FRONTEND_URL),
   PROXY_URL: origin(value.PROXY_URL)!,

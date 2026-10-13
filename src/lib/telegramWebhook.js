@@ -582,9 +582,9 @@ function extractGtwyErrorMessage(data, status, rawText = "") {
 }
 
 async function streamGtwyCompletion({ versionId, userText, threadId, extraFields, botToken, onDelta, onStart }) {
-  const pythonUrl = (process.env.GTWY_PYTHON_GTWY_SERVER_URL || "").replace(/\/$/, "");
+  const pythonUrl = (process.env.GTWY_PYTHON_SERVER_URL || "").replace(/\/$/, "");
   const pauthkey = process.env.GTWY_PAUTH_KEY || process.env.ACCESS_KEY;
-  if (!pythonUrl) throw new Error("GTWY_PYTHON_GTWY_SERVER_URL is not set");
+  if (!pythonUrl) throw new Error("GTWY_PYTHON_SERVER_URL is not set");
   if (!pauthkey) throw new Error("GTWY_PAUTH_KEY is not set");
 
   const payload = {
