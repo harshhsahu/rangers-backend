@@ -124,22 +124,69 @@ run uses a fresh thread.
 
 ## Migration
 
-What the change that moves the data and switches the services over has to do:
+### Copying the data: `src/scripts/migrateRangers.ts`
 
-1. **Copy rangers.** Copy each GTWY agent and its version into `rangers`, using the mapping above,
-   with `legacy` filled in. Fold in its `channeldetails` document.
-2. **Copy schedules.** Copy `rangerschedules` into `schedules`, **keeping each `_id`**: EasyCron job
-   URLs carry it. Set `ranger_id` from the copied ranger.
-3. **Telegram webhooks.** Look rangers up by `legacy.version_id` until each bot's webhook is
+The script copies every ranger out of GTWY into `rangers`, and every schedule into `schedules`. It
+only reads from GTWY and from the old collections.
+
+**What it reads:**
+
+- **Rangers:** GTWY agents (`configurations`) in `ORG_ID`, inside the embed folder `FOLDER_ID`.
+- **From GTWY:** each ranger's version (`configuration_versions`) and its tools (`apicalls`).
+- **From this service:** its `channeldetails` document and its `rangerschedules`.
+
+```bash
+npm run migrate:rangers                   # dry run: reads, maps and reports; writes nothing
+npm run migrate:rangers -- --apply        # writes
+npm run migrate:rangers -- --agent <id>   # one GTWY agent only; combine with --apply
+```
+
+It needs `GTWY_MONGODB_URI` as well as the usual `.env`. That's GTWY's database, with the database
+name in the path, and a read-only user is enough. It also uses `MONGODB_URI`, `ORG_ID`, `FOLDER_ID`
+and `CHANNEL_ENCRYPTION_KEY`. Where the dev dependencies aren't installed, run
+`node dist/scripts/migrateRangers.js` after `npm run build`.
+
+**What it decides:**
+
+- **Which version.** It takes the version a channel is wired to, because that's the one users talk to
+  and its id is in the Telegram webhook URL. Otherwise it takes the published version, else the first.
+  It warns when a ranger has more than one version.
+- **Tenant.** `org_id` is the GTWY agent's `user_id`. A ranger without one is skipped.
+- **Parameters.** GTWY stores them as `{ mode, value }`. Custom values are kept, defaults are dropped,
+  and `min`/`max` are kept as those words.
+- **Prompt.** A prompt with a custom template becomes the text GTWY sent: the template with
+  `{{role}}`, `{{goal}}` and `{{instruction}}` filled in.
+- **Bot tokens.** Any token still stored in plaintext is encrypted.
+- **Schedules.** Each keeps its `_id`, so its EasyCron job URL keeps working. Its `org_id` becomes the
+  ranger's tenant, and an `easycron_id` becomes a string, or is left out when there is none.
+- **Deleted rangers.** Rangers in GTWY's trash are copied with `deleted_at` set.
+
+**What it skips, reported as warnings:**
+
+- a tool missing from `apicalls`
+- a knowledge base without a `resource_id`
+- a ranger without a tenant or a version
+- a channel document or schedule whose ranger wasn't copied
+- a delivery that isn't Telegram
+
+**Running it again is safe until the app writes to `rangers`.** Rangers are matched on
+`legacy.agent_id` and keep their `_id` and `created_at`; schedules are replaced by `_id`. After that,
+running it again would overwrite edits made in Rangers.
+
+### Before switching the services over
+
+1. **Telegram webhooks.** Look rangers up by `legacy.version_id` until each bot's webhook is
    registered again with the ranger id.
-4. **Thread ids.** Prefix them with the ranger id, e.g. `<ranger_id>_tg_<chatId>`. On the direct API
+2. **Thread ids.** Prefix them with the ranger id, e.g. `<ranger_id>_tg_<chatId>`. On the direct API
    every ranger shares one hidden GTWY agent, so a bare `tg_<chatId>` would mix the memory of two
    rangers talking to the same person. The prefix also lets GTWY's history be filtered per ranger.
-5. **Gaps on GTWY's direct API**, to settle before rangers run on it:
+3. **Gaps on GTWY's direct API**, to settle before rangers run on it:
    - knowledge bases (`doc_ids`) can't be sent with a request
    - the tone text has to be added to the prompt by Rangers
    - GTWY can't enforce a per-ranger usage limit
    - the mobile channel (GTWY's chatbot embed) needs a GTWY agent
-6. **Auth.** Every route scopes by `org_id`; `/api/channel-details` has no auth today.
-7. **Cleanup.** Delete `src/models/channelDetails.model.ts` and `src/models/rangerSchedule.model.ts`,
+4. **Auth.** Every route scopes by `org_id`; `/api/channel-details` has no auth today.
+5. **Edits during the switch.** Changes made in GTWY after the copy are not picked up: run the
+   migration again just before switching, then stop editing rangers in GTWY.
+6. **Cleanup.** Delete `src/models/channelDetails.model.ts` and `src/models/rangerSchedule.model.ts`,
    and drop the old collections once nothing reads them.

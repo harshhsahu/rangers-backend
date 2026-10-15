@@ -22,6 +22,8 @@ npm run dev
 - `npm run build` – compile to `dist/`
 - `npm start` – run compiled build
 - `npm run typecheck` – type-check without emitting
+- `npm run migrate:rangers [-- --apply]` – copy rangers and schedules out of GTWY into the new
+  collections; a dry run unless `--apply` ([docs/database.md](docs/database.md#migration))
 - `node scripts/sync-scheduler-tunnel.mjs [url]` – repoint every EasyCron job at a new dev tunnel
 
 ## Testing
