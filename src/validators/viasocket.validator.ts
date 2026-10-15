@@ -1,5 +1,5 @@
 import Joi from 'joi';
-import { idParams, nullableString, optionalString, requiredString } from './common.js';
+import { idParams, nullableId, nullableString, optionalId, optionalString, requiredString } from './common.js';
 
 export interface AppSearchQuery {
   key?: string;
@@ -75,7 +75,7 @@ export const authenticationsSchema = {
 
 export const tokenSchema = {
   body: Joi.object<TokenBody>({
-    org_id: optionalString,
+    org_id: optionalId,
     agent_id: optionalString,
     version_id: optionalString,
   }),
@@ -99,8 +99,8 @@ export const addAppToolSchema = {
     embed_token: requiredString(appToolRequired),
     service_name: optionalString,
     icon_url: nullableString,
-    org_id: nullableString,
-    user_id: nullableString,
+    org_id: nullableId,
+    user_id: nullableId,
   }),
 };
 
@@ -119,7 +119,7 @@ export const enableToolSchema = {
       .unknown(true)
       .required()
       .messages({ 'any.required': enableToolRequired, 'object.base': enableToolRequired }),
-    org_id: optionalString,
+    org_id: optionalId,
     agent_id: optionalString,
     version_id: optionalString,
   }),
